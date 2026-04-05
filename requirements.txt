@@ -1,0 +1,7 @@
+alpaca-py
+requests
+gradio
+exchange_calendars
+pytz
+aiohttp
+asyncio
