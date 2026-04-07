@@ -14,7 +14,6 @@ ET = pytz.timezone("America/New_York")
 import aiohttp
 import asyncio
 
-
 # author John
 
 # Load once at module level — not inside the function
@@ -64,55 +63,78 @@ all_history = {
 last_yield_update = 0
 yield_history = []
 
-async def fetch_yahoo(session):
+async def fetch_yahoo_realtime(session):
     try:
-        url = "https://query1.finance.yahoo.com/v8/finance/chart/^TNX"
-        async with session.get(url, timeout=5) as r:
+        url = "https://query1.finance.yahoo.com/v8/finance/chart/%5ETNX"
+        params = {"interval": "1m", "range": "1d"}
+        headers = {"User-Agent": "Mozilla/5.0", "Accept": "application/json"}
+        async with session.get(url, params=params, headers=headers, timeout=aiohttp.ClientTimeout(total=8)) as r:
             data = await r.json()
-            result = data.get("chart", {}).get("result")
-            if result:
-                meta = result[0]["meta"]
-                raw = meta.get("regularMarketPrice")
-                if raw is not None:
-                    return raw / 10
-                closes = result[0].get("indicators", {}).get("quote", [{}])[0].get("close")
-                if closes and closes[-1] is not None:
-                    return closes[-1] / 10
-    except:
+        result = data.get("chart", {}).get("result")
+        if not result:
+            return None
+        closes = (
+            result[0]
+            .get("indicators", {})
+            .get("quote", [{}])[0]
+            .get("close", [])
+        )
+        valid = [c for c in closes if c is not None]
+        if valid:
+            return round(valid[-1] / 10, 4)
+        raw = result[0].get("meta", {}).get("regularMarketPrice")
+        return round(raw / 10, 4) if raw else None
+    except Exception:
         return None
 
-# delay a few min
-async def fetch_exchangerate(session):
+async def fetch_stooq(session):
     try:
-        url = "https://api.exchangerate.host/economy"
-        async with session.get(url, timeout=5) as r:
-            data = await r.json()
-            val = data["rates"].get("US10Y")
-            return val
-    except:
+        url = "https://stooq.com/q/l/?s=10us.b&f=sd2t2ohlcv&h&e=csv"
+        headers = {"User-Agent": "Mozilla/5.0"}
+        async with session.get(url, headers=headers, timeout=aiohttp.ClientTimeout(total=8)) as r:
+            text = await r.text()
+        lines = text.strip().splitlines()
+        if len(lines) < 2:
+            return None
+        parts = lines[1].split(",")
+        return round(float(parts[6]), 4)
+    except Exception:
         return None
 
-# daily only
-async def fetch_treasury(session):
+
+async def fetch_cnbc(session):
     try:
-        url = "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.json"
-        async with session.get(url, timeout=5) as r:
-            data = await r.json()
-            for item in data:
-                if item.get("securityTerm") == "10-Year":
-                    return float(item["interestRate"])
-    except:
+        url = "https://quote.cnbc.com/quote-html-webservice/restQuote/symbolType/symbol"
+        params = {
+            "symbols": "US10Y",
+            "requestMethod": "itv",
+            "noform": "1",
+            "partnerId": "2",
+            "fund": "1",
+            "exthrs": "1",
+            "output": "json",
+            "events": "0",
+        }
+        headers = {"User-Agent": "Mozilla/5.0", "Referer": "https://www.cnbc.com"}
+        async with session.get(url, params=params, headers=headers, timeout=aiohttp.ClientTimeout(total=8)) as r:
+            data = await r.json(content_type=None)
+        quote = data["FormattedQuoteResult"]["FormattedQuote"][0]
+        return float(quote["last"])
+    except Exception:
         return None
 
-# sometimes 500     
-async def fetch_marketwatch(session):
-    try:
-        url = "https://api.marketwatch.com/api/quotes/us10y"
-        async with session.get(url, timeout=5) as r:
-            data = await r.json()
-            return data.get("last", {}).get("price")
-    except:
-        return None
+async def get_10y_yield() -> float | None:
+    async with aiohttp.ClientSession() as session:
+        for fetcher in [
+            fetch_yahoo_realtime,
+            fetch_stooq,
+            fetch_cnbc,
+        ]:
+            val = await fetcher(session)
+            if val:
+                return val
+    return None
+
 
 # daily
 async def fetch_fred(session):
@@ -136,43 +158,11 @@ async def fetch_fred(session):
     except:
         return None
 
-async def get_10yr_yield_async():
-    async with aiohttp.ClientSession() as session:
-        tasks = [
-            asyncio.create_task(fetch_yahoo(session)),
-            asyncio.create_task(fetch_marketwatch(session)),
-            #asyncio.create_task(fetch_fred(session)),
-            #asyncio.create_task(fetch_exchangerate(session)),
-            #asyncio.create_task(fetch_treasury(session)),
-        ]
-
-        done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
-
-        # Get the first completed result
-        for task in done:
-            result = task.result()
-            if result is not None:
-                # Cancel the rest
-                for p in pending:
-                    p.cancel()
-                return float(f"{result:.3f}")
-
-        # If first completed returned None, wait for others
-        for task in pending:
-            try:
-                result = await task
-                if result is not None:
-                    return float(f"{result:.3f}")
-            except:
-                pass
-
-        return None
-
 async def yield_updater():
     global yield_history
 
     while True:
-        val = await get_10yr_yield_async()
+        val = await get_10y_yield()
         ts = datetime.now(ET).strftime("%H:%M:%S")
 
         if val is not None:
@@ -180,6 +170,7 @@ async def yield_updater():
             yield_history = yield_history[-4:]
 
         await asyncio.sleep(5)
+
 
 # 2. REST FALLBACK (To get the last price when market is closed)
 def fmp_poll_loop():
@@ -295,11 +286,11 @@ def start_system():
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
 
-    # Start async yield updater
+    # Start your 5-second UI updater
     loop.create_task(yield_updater())
 
     # Run fmp_poll_loop in a background thread
-    loop.run_in_executor(None, fmp_poll_loop)
+  #  loop.run_in_executor(None, fmp_poll_loop)
 
     loop.run_forever()
 
@@ -388,14 +379,20 @@ def update_ui():
             # --- RECORD LINES ---
             for i, rec in enumerate(records_to_show):
                 style = (
-                    "font-weight: bold; font-size: 1.2em; color: white;"
+                    f"font-weight: bold; font-size: 1.2em; color:{color};"
+                    if i == 0 else
+                    "color: #aaa; font-size: 1.0em;"
+                )
+                style_time = (
+                    f"font-weight: bold; font-size: 1.0em; color:white;"
                     if i == 0 else
                     "color: #aaa; font-size: 1.0em;"
                 )
 
                 # Only show price + time
-                line = f"{rec['price']} @ {rec['time']}"
-                html_output += f"<div style='margin: 5px 0; {style}'>{line}</div>"
+                price = f"{rec['price']}"
+                time_str = f" @ {rec['time']}"
+                html_output += f"<div style='margin: 5px 0; {style}'>{price}<span style='{style_time}'>{time_str}</span></div>"
 
         html_output += "</div>"
 
