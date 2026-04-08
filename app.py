@@ -111,6 +111,7 @@ async def gld_updater():
             ts = datetime.now(ET).strftime("%H:%M:%S")
 
             if val is not None:
+                val = f"{val:.2f}"
                 gld_history.append({"gld": val, "time": ts})
                 gld_history = gld_history[-4:]   # keep last 4 entries
 
