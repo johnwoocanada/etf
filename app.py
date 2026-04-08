@@ -63,113 +63,58 @@ all_history = {
 last_yield_update = 0
 yield_history = []
 
-async def fetch_yahoo_realtime(session):
+# Fetch from Railway endpoint
+async def fetch_yield_from_railway(session) -> float | None:
     try:
-        url = "https://query1.finance.yahoo.com/v8/finance/chart/%5ETNX"
-        params = {"interval": "1m", "range": "1d"}
-        headers = {"User-Agent": "Mozilla/5.0", "Accept": "application/json"}
-        async with session.get(url, params=params, headers=headers, timeout=aiohttp.ClientTimeout(total=8)) as r:
+        url = "https://playwright-production-da6f.up.railway.app/yield"
+        async with session.get(url, timeout=aiohttp.ClientTimeout(total=5)) as r:
             data = await r.json()
-        result = data.get("chart", {}).get("result")
-        if not result:
-            return None
-        closes = (
-            result[0]
-            .get("indicators", {})
-            .get("quote", [{}])[0]
-            .get("close", [])
-        )
-        valid = [c for c in closes if c is not None]
-        if valid:
-            return round(valid[-1] / 10, 4)
-        raw = result[0].get("meta", {}).get("regularMarketPrice")
-        return round(raw / 10, 4) if raw else None
-    except Exception:
-        return None
-
-async def fetch_stooq(session):
-    try:
-        url = "https://stooq.com/q/l/?s=10us.b&f=sd2t2ohlcv&h&e=csv"
-        headers = {"User-Agent": "Mozilla/5.0"}
-        async with session.get(url, headers=headers, timeout=aiohttp.ClientTimeout(total=8)) as r:
-            text = await r.text()
-        lines = text.strip().splitlines()
-        if len(lines) < 2:
-            return None
-        parts = lines[1].split(",")
-        return round(float(parts[6]), 4)
-    except Exception:
-        return None
-
-
-async def fetch_cnbc(session):
-    try:
-        url = "https://quote.cnbc.com/quote-html-webservice/restQuote/symbolType/symbol"
-        params = {
-            "symbols": "US10Y",
-            "requestMethod": "itv",
-            "noform": "1",
-            "partnerId": "2",
-            "fund": "1",
-            "exthrs": "1",
-            "output": "json",
-            "events": "0",
-        }
-        headers = {"User-Agent": "Mozilla/5.0", "Referer": "https://www.cnbc.com"}
-        async with session.get(url, params=params, headers=headers, timeout=aiohttp.ClientTimeout(total=8)) as r:
-            data = await r.json(content_type=None)
-        quote = data["FormattedQuoteResult"]["FormattedQuote"][0]
-        return float(quote["last"])
-    except Exception:
-        return None
-
-async def get_10y_yield() -> float | None:
-    async with aiohttp.ClientSession() as session:
-        for fetcher in [
-            fetch_yahoo_realtime,
-            fetch_stooq,
-            fetch_cnbc,
-        ]:
-            val = await fetcher(session)
-            if val:
-                return val
-    return None
-
-
-# daily
-async def fetch_fred(session):
-    try:
-        url = "https://api.stlouisfed.org/fred/series/observations"
-        params = {
-            "series_id": "DGS10",
-            "api_key": FRED_KEY,
-            "file_type": "json",
-            "limit": 1,
-            "sort_order": "desc"
-        }
-        async with session.get(url, params=params, timeout=5) as r:
-            data = await r.json()
-
-            obs = data["observations"][0]
-            val = obs["value"]
-
-            if val != ".":
-                return float(val)
+            return float(data.get("yield"))
     except:
         return None
+
 
 async def yield_updater():
     global yield_history
 
-    while True:
-        val = await get_10y_yield()
-        ts = datetime.now(ET).strftime("%H:%M:%S")
+    async with aiohttp.ClientSession() as session:
+        while True:
+            val = await fetch_yield_from_railway(session)
+            ts = datetime.now(ET).strftime("%H:%M:%S")
 
-        if val is not None:
-            yield_history.append({"yield": val, "time": ts})
-            yield_history = yield_history[-4:]
+            if val is not None:
+                yield_history.append({"yield": val, "time": ts})
+                yield_history = yield_history[-4:]   # keep last 4 entries
 
-        await asyncio.sleep(5)
+            await asyncio.sleep(5)
+
+last_gld_update = 0
+gld_history = []
+
+# Fetch from Railway endpoint
+async def fetch_gld_from_railway(session) -> float | None:
+    try:
+        url = "https://playwright-production-da6f.up.railway.app/gld"
+        async with session.get(url, timeout=aiohttp.ClientTimeout(total=5)) as r:
+            data = await r.json()
+            return float(data.get("gold"))
+    except:
+        return None
+
+
+async def gld_updater():
+    global gld_history
+
+    async with aiohttp.ClientSession() as session:
+        while True:
+            val = await fetch_gld_from_railway(session)
+            ts = datetime.now(ET).strftime("%H:%M:%S")
+
+            if val is not None:
+                gld_history.append({"gld": val, "time": ts})
+                gld_history = gld_history[-4:]   # keep last 4 entries
+
+            await asyncio.sleep(2)
 
 
 # 2. REST FALLBACK (To get the last price when market is closed)
@@ -286,11 +231,14 @@ def start_system():
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
 
-    # Start your 5-second UI updater
+    # Start 5-second yield updater
     loop.create_task(yield_updater())
 
+    # Start 2-second gld updater
+    loop.create_task(gld_updater())
+
     # Run fmp_poll_loop in a background thread
-  #  loop.run_in_executor(None, fmp_poll_loop)
+    loop.run_in_executor(None, fmp_poll_loop)
 
     loop.run_forever()
 
@@ -299,28 +247,27 @@ def update_ui():
     # --- TOP YIELD TICKER ---
     html_output = "<div style='font-family: monospace; margin-bottom: 25px;'>"
 
-    # Header label
+    # Header gld
     html_output += (
-        "<div style='color: white; font-size: 20px; font-weight: bold; "
-        "margin-bottom: 8px;'><span style='color: #4da6ff;'>10 Y</span></div>"
+        "<div style='color: white; font-size: 18px; font-weight: bold; "
+        "border-bottom:1px solid #333; margin-bottom:10px;'><span style='color: #FFD700;'>Gld </span>"
     )
 
     # --- NO RECORDS? ---
-    if not yield_history:
+    if not gld_history:
         ts = datetime.now(ET).strftime("%D  %H:%M")
-        html_output += "<div style='color: #666;'>Market closed @ " + ts + "</div>"
+        html_output += "</div><div style='color: #666;'>Market closed @ " + ts + "</div>"
     else:
         # Render last 4 yield records
-        for i, rec in enumerate(yield_history):
-            value = rec["yield"]
+        for i, rec in enumerate(gld_history):
+            value = rec["gld"]
             ts_y = rec["time"]
 
             if i == 0:
                 # FIRST LINE — bold
                 html_output += (
-                    f"<div style='font-size: 18px; font-weight: bold; margin: 3px 0;'>"
-                    f"<span style='color:#4da6ff;'>{value}</span> "
-                    f"<span style='color:white;'>@ {ts_y}</span>"
+                    f"<span style='color: #FFD700;'>{value}</span>"
+                    f"<span style='font-size: 16px; color:white;'> @ {ts_y}</span>"
                     f"</div>"
                 )
             else:
@@ -334,6 +281,42 @@ def update_ui():
 
     html_output += "</div>"
 
+    # Header 10 year yield
+    html_output += (
+        "<div style='color: white; font-size: 20px; font-weight: bold; "
+        "border-bottom:1px solid #333; margin-bottom:10px;'><span style='color: #4da6ff;'>10 Y&nbsp;&nbsp;</span>"
+    )
+
+    # --- NO RECORDS? ---
+    if not yield_history:
+        ts = datetime.now(ET).strftime("%D  %H:%M")
+        html_output += "</div><div style='color: #666;'>Market closed @ " + ts + "</div>"
+    else:
+        # Render last 4 yield records
+        for i, rec in enumerate(yield_history):
+            value = rec["yield"]
+            ts_y = rec["time"]
+
+            if i == 0:
+                # FIRST LINE — bold
+                html_output += (
+                    #f"<div style='font-size: 18px; font-weight: bold; margin: 3px 0;'>"
+                    f"<span style='color:#4da6ff;'>{value}</span> "
+                    f"<span style='font-size: 16px; color:white;'>&nbsp;&nbsp;@&nbsp;&nbsp;{ts_y}</span>"
+                    f"</div>"
+                )
+            else:
+                # Other lines — normal
+                html_output += (
+                    f"</div><div style='margin: 5px 0; color: #aaa; font-size: 1.0em;'>"
+                    f"{value}"
+                    f"@ {ts_y}"
+                    f"</div>"
+                )
+
+    html_output += "</div>"
+
+    # Nugt and Jdst prices
     html_output += "<div style='background-color: #1a1a1a; padding: 20px; border-radius: 10px;'>"
 
     for sym, color in [("NUGT", "#FFD700"), ("JDST", "#00FF00")]:
