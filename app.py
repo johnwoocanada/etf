@@ -97,7 +97,16 @@ async def fetch_gld_from_railway(session) -> float | None:
         url = "https://playwright-production-da6f.up.railway.app/gld"
         async with session.get(url, timeout=aiohttp.ClientTimeout(total=5)) as r:
             data = await r.json()
-            return float(data.get("gold"))
+            raw = data.get("gold")
+
+            if raw is None:
+                return None
+
+            # Convert "4,739.725" → 4739.725
+            if isinstance(raw, str):
+                raw = raw.replace(",", "")
+
+            return float(raw)
     except:
         return None
 
@@ -276,7 +285,7 @@ def update_ui():
                 html_output += (
                     f"<div style='margin: 5px 0; color: #aaa; font-size: 1.0em;'>"
                     f"{value}"
-                    f"@ {ts_y}"
+                    f"  @ {ts_y}"
                     f"</div>"
                 )
 
@@ -284,7 +293,7 @@ def update_ui():
 
     # Header 10 year yield
     html_output += (
-        "<div style='color: white; font-size: 20px; font-weight: bold; "
+        "<div style='color: white; font-size: 18px; font-weight: bold; "
         "border-bottom:1px solid #333; margin-bottom:10px;'><span style='color: #4da6ff;'>10 Y&nbsp;&nbsp;</span>"
     )
 
@@ -301,7 +310,6 @@ def update_ui():
             if i == 0:
                 # FIRST LINE — bold
                 html_output += (
-                    #f"<div style='font-size: 18px; font-weight: bold; margin: 3px 0;'>"
                     f"<span style='color:#4da6ff;'>{value}</span> "
                     f"<span style='font-size: 16px; color:white;'>&nbsp;&nbsp;@&nbsp;&nbsp;{ts_y}</span>"
                     f"</div>"
@@ -309,9 +317,9 @@ def update_ui():
             else:
                 # Other lines — normal
                 html_output += (
-                    f"</div><div style='margin: 5px 0; color: #aaa; font-size: 1.0em;'>"
+                    f"<div style='margin: 5px 0; color: #aaa; font-size: 1.0em;'>"
                     f"{value}"
-                    f"@ {ts_y}"
+                    f"&nbsp;&nbsp;@&nbsp;{ts_y}"
                     f"</div>"
                 )
 
