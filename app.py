@@ -254,6 +254,7 @@ def start_system():
 
 # 4. GRADIO UI
 def update_ui():
+
     # --- TOP YIELD TICKER ---
     html_output = "<div style='font-family: monospace; margin-bottom: 25px;'>"
 
@@ -277,7 +278,7 @@ def update_ui():
                 # FIRST LINE — bold
                 html_output += (
                     f"<span style='color: #FFD700;'>{value}</span>"
-                    f"<span style='font-size: 16px; color:white;'> @ {ts_y}</span>"
+                    f"<span style='font-size: 16px; color: #aaa;'> @ {ts_y}</span>"
                     f"</div>"
                 )
             else:
@@ -293,7 +294,7 @@ def update_ui():
 
     # Header 10 year yield
     html_output += (
-        "<div style='color: white; font-size: 18px; font-weight: bold; "
+        "<div style='color: white; font-size: 20px; font-weight: bold; "
         "border-bottom:1px solid #333; margin-bottom:10px;'><span style='color: #4da6ff;'>10 Y&nbsp;&nbsp;</span>"
     )
 
@@ -311,7 +312,7 @@ def update_ui():
                 # FIRST LINE — bold
                 html_output += (
                     f"<span style='color:#4da6ff;'>{value}</span> "
-                    f"<span style='font-size: 16px; color:white;'>&nbsp;&nbsp;@&nbsp;&nbsp;{ts_y}</span>"
+                    f"<span style='font-size: 16px; color: #aaa;'>&nbsp;&nbsp;@&nbsp;&nbsp;{ts_y}</span>"
                     f"</div>"
                 )
             else:
@@ -338,8 +339,8 @@ def update_ui():
         obi = all_history[sym]["obi"]
 
         # Color rules
-        vol_color = "white" if net_vol >= 0 else "red"
-        obi_color = "white" if (obi is None or obi >= 0) else "red"
+        vol_color = "#aaa" if net_vol >= 0 else "red"
+        obi_color = "#aaa" if (obi is None or obi >= 0) else "red"
 
         # --- SYMBOL HEADER (ALL IN ONE LINE) ---
         html_output += "<div style='margin-bottom: 30px; font-family: monospace;'>"
@@ -353,11 +354,11 @@ def update_ui():
             f"<span style='color:{color}; margin-right:15px;'>{sym[0]}</span>"
 
             # Volume
-            f"<span style='color:{vol_color}; font-size:18px; margin-right:10px;'>"
+            f"<span style='color:{vol_color}; font-weight: normal; font-size:18px; margin-right:10px;'>"
             f"vol {net_vol}</span>"
 
             # OBI
-            f"<span style='color:{obi_color}; font-size:18px;'>"
+            f"<span style='color:{obi_color}; font-weight: normal; font-size:18px;'>"
             f"obi {obi if obi is not None else 0:.2f}</span>"
 
             f"</div>"
@@ -376,7 +377,7 @@ def update_ui():
                     "color: #aaa; font-size: 1.0em;"
                 )
                 style_time = (
-                    f"font-weight: bold; font-size: 1.0em; color:white;"
+                    f"font-weight: normal; font-size: 1.0em; color:#aaa;"
                     if i == 0 else
                     "color: #aaa; font-size: 1.0em;"
                 )
