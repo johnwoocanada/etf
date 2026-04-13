@@ -5,3 +5,7 @@ exchange_calendars
 pytz
 aiohttp
 asyncio
+yfinance
+pandas
+numpy
+scikit-learn
