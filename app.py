@@ -87,8 +87,9 @@ async def yield_updater():
             ts = datetime.now(ET).strftime("%H:%M:%S")
 
             if val is not None:
-                yield_history.append({"yield": val, "time": ts})
-                yield_history = yield_history[-4:]   # keep last 4 entries
+                if not yield_history or val != yield_history[-1]["yield"]:
+                    yield_history.append({"yield": val, "time": ts})
+                    yield_history = yield_history[-4:]   # keep last 4 entries
 
             await asyncio.sleep(5)
 
@@ -125,8 +126,9 @@ async def gld_updater():
 
             if val is not None:
                 val = f"{val:.2f}"
-                gld_history.append({"gld": val, "time": ts})
-                gld_history = gld_history[-4:]   # keep last 4 entries
+                if not gld_history or val != gld_history[-1]["gld"]:
+                    gld_history.append({"gld": val, "time": ts})
+                    gld_history = gld_history[-4:]   # keep last 4 entries
 
             await asyncio.sleep(2)
 
