@@ -157,9 +157,8 @@ def fmp_poll_loop():
     last_date = None
 
     while True:
-        if not is_market_open():
-            time.sleep(60)  # sleep 1 min when market closed
-            continue
+        # Block here (zero CPU) until market_open_event is set by market_watcher
+        market_open_event.wait()
 
         # ── Daily reset ──────────────────────────────────────────────────
         today = datetime.now(ET).strftime("%Y-%m-%d")
@@ -299,10 +298,8 @@ def forecast_loop():
     last_date = None
 
     while True:
-        # 1. Market open check
-        if not is_market_open():
-            time.sleep(60)
-            continue
+        # Block here (zero CPU) until market_open_event is set by market_watcher
+        market_open_event.wait()
 
         # 2. Daily reset — also serves as the startup pre-load on first iteration
         today = datetime.now(ET).strftime("%Y-%m-%d")
@@ -395,6 +392,32 @@ def forecast_loop():
         time.sleep(600)
 
 
+# ── Market gate ───────────────────────────────────────────────────────────
+# fmp_poll_loop and forecast_loop block on this event when market is closed.
+# market_watcher sets/clears it exactly once per open/close transition.
+market_open_event = threading.Event()
+
+
+async def market_watcher():
+    """
+    Async watcher that sets/clears market_open_event on open/close transitions.
+    Checks every 30 s — cheap, and transitions are never missed by more than 30 s.
+    Triggers exactly once per status change so threads are started/stopped once.
+    """
+    last_status = None
+    while True:
+        open_now = is_market_open()
+        if open_now != last_status:
+            last_status = open_now
+            if open_now:
+                print("market_watcher: market OPEN  — starting poll + forecast threads")
+                market_open_event.set()      # unblocks both threads
+            else:
+                print("market_watcher: market CLOSED — pausing poll + forecast threads")
+                market_open_event.clear()    # blocks both threads at next .wait()
+        await asyncio.sleep(30)
+
+
 def start_system():
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
@@ -405,10 +428,15 @@ def start_system():
     # Start 2-second gld updater
     loop.create_task(gld_updater())
 
+    # Start market open/close watcher — sets market_open_event
+    loop.create_task(market_watcher())
+
     # Run fmp_poll_loop in a background thread
+    # (blocks on market_open_event when market is closed)
     loop.run_in_executor(None, fmp_poll_loop)
 
     # Run forecast_loop in its own background thread
+    # (blocks on market_open_event when market is closed)
     loop.run_in_executor(None, forecast_loop)
 
     loop.run_forever()
