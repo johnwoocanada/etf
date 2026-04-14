@@ -126,7 +126,7 @@ import pytz
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
-DATA_START       = "2024-01-01"   # enough history for all lag indicators
+DATA_START       = "2025-07-01"   # enough history for all lag indicators
 DATA_END         = "2026-12-31"
 RSI_PERIOD       = 7
 BB_PERIOD        = 20
