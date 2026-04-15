@@ -455,7 +455,7 @@ def update_ui():
     # Header gld
     html_output += (
         "<div style='color: white; font-size: 18px; font-weight: bold; "
-        "border-bottom:1px solid #333; margin-bottom:10px;'><span style='color: #FFD700;'>Gld </span>"
+        "border-bottom:1px solid #333; margin-bottom:6px;'><span style='color: #FFD700;'>Gld </span>"
     )
 
     # --- NO RECORDS? ---
@@ -489,7 +489,7 @@ def update_ui():
     # Header 10 year yield
     html_output += (
         "<div style='color: white; font-size: 20px; font-weight: bold; "
-        "border-bottom:1px solid #333; margin-bottom:10px;'><span style='color: #4da6ff;'>10 Y&nbsp;&nbsp;</span>"
+        "border-bottom:1px solid #333; margin-bottom: 6px;'><span style='color: #4da6ff;'>10 Y&nbsp;&nbsp;</span>"
     )
 
     # --- NO RECORDS? ---
@@ -537,12 +537,12 @@ def update_ui():
         obi_color = "#aaa" if (obi is None or obi >= 0) else "red"
 
         # --- SYMBOL HEADER (ALL IN ONE LINE) ---
-        html_output += "<div style='margin-bottom: 8px; font-family: monospace;'>"
+        html_output += "<div style='margin-bottom: 6px; font-family: monospace;'>"
 
         html_output += (
             f"<div style='display:flex; align-items:center; "
             f"font-size:24px; font-weight:bold; border-bottom:1px solid #333; "
-            f"margin-bottom:10px;'>"
+            f"margin-bottom:4px;'>"
 
             # Symbol
             f"<span style='color:{color}; margin-right:15px;'>{sym[0]}</span>"
@@ -593,12 +593,12 @@ def update_ui():
         ts = datetime.now(ET).strftime("%D  %H:%M")
         html_output += (
             "<div style='color: white; font-size: 18px; font-weight: bold; "
-            "border-bottom:1px solid #333; margin-bottom:10px;'>"
+            "border-bottom:1px solid #333; margin-bottom:4px;'>"
             "<span style='color: #FFD700;'>N</span>"
             "<span style='color: #aaa; font-weight: normal; font-size: 16px;'>"
             f"  Market closed @ {ts}</span></div>"
             "<div style='color: white; font-size: 18px; font-weight: bold; "
-            "margin-bottom:10px;'>"
+            "margin-bottom:4px;'>"
             "<span style='color: #00FF00;'>J</span>"
             "<span style='color: #aaa; font-weight: normal; font-size: 16px;'>"
             f"  Market closed @ {ts}</span></div>"
@@ -622,7 +622,7 @@ def update_ui():
                     border = "border-bottom:1px solid #333; margin-bottom:6px;" if sym == "NUGT" else ""
                     html_output += (
                         f"<div style='font-size: 18px; font-weight: bold; "
-                        f"{border} padding-bottom:6px; margin-bottom:4px;'>"
+                        f"{border} padding-bottom:4px; margin-bottom:4px;'>"
                         f"<span style='color:{color};'>{label}</span>"
                         f"<span style='color:{color};'> {low} - {high}</span>"
                         f"<span style='color: #aaa; font-weight: normal; font-size: 15px;'>"
