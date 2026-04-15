@@ -88,8 +88,10 @@ async def yield_updater():
 
             if val is not None:
                 if not yield_history or val != yield_history[-1]["yield"]:
+                    # Only append when value changes — old timestamp preserved when flat
+                    # so you can tell exactly when the yield started holding steady
                     yield_history.append({"yield": val, "time": ts})
-                    yield_history = yield_history[-4:]   # keep last 4 entries
+                    yield_history = yield_history[-4:]
 
             await asyncio.sleep(5)
 
@@ -127,8 +129,9 @@ async def gld_updater():
             if val is not None:
                 val = f"{val:.2f}"
                 if not gld_history or val != gld_history[-1]["gld"]:
+                    # Only append when value changes — old timestamp preserved when flat
                     gld_history.append({"gld": val, "time": ts})
-                    gld_history = gld_history[-4:]   # keep last 4 entries
+                    gld_history = gld_history[-4:]
 
             await asyncio.sleep(2)
 
@@ -242,18 +245,20 @@ def fmp_poll_loop():
                 else:
                     price_str = "None - None"
 
-                # 8. Append to all_history records
-                all_history[sym]["records"].append({
-                    "price": price_str,
-                    "time": ts,
-                    "net_volume": net_vol,
-                    "olb": obi
-                })
+                # 8. Append to all_history records — only when price or net_vol changed
+                #    Timestamp is frozen when values are flat (same as gold/yield behaviour)
+                records = all_history[sym]["records"]
+                last    = records[-1] if records else None
+                if last is None or last["price"] != price_str or last["net_volume"] != net_vol:
+                    records.append({
+                        "price":      price_str,
+                        "time":       ts,
+                        "net_volume": net_vol,
+                        "olb":        obi
+                    })
+                    all_history[sym]["records"] = records[-10:]
 
                 display_st += f"{price_str} @ {ts} {net_vol} {obi})"
-
-                # Keep only last 10 records
-                all_history[sym]["records"] = all_history[sym]["records"][-10:]
 
                 # 9. Update state for next tick
                 all_history[sym]["trade_price"] = trade_price
@@ -458,8 +463,8 @@ def update_ui():
         ts = datetime.now(ET).strftime("%D  %H:%M")
         html_output += "</div><div style='color: #666;'>Market closed @ " + ts + "</div>"
     else:
-        # Render last 4 yield records
-        for i, rec in enumerate(gld_history):
+        # Render newest first — reverse so index 0 = most recent
+        for i, rec in enumerate(reversed(gld_history)):
             value = rec["gld"]
             ts_y = rec["time"]
 
@@ -492,8 +497,8 @@ def update_ui():
         ts = datetime.now(ET).strftime("%D  %H:%M")
         html_output += "</div><div style='color: #666;'>Market closed @ " + ts + "</div>"
     else:
-        # Render last 4 yield records
-        for i, rec in enumerate(yield_history):
+        # Render newest first — reverse so index 0 = most recent
+        for i, rec in enumerate(reversed(yield_history)):
             value = rec["yield"]
             ts_y = rec["time"]
 
@@ -520,8 +525,8 @@ def update_ui():
 
     for sym, color in [("NUGT", "#FFD700"), ("JDST", "#00FF00")]:
 
-        # Last 4 records from all_history
-        records_to_show = all_history[sym]["records"][:4]
+        # Last 4 records — newest first
+        records_to_show = list(reversed(all_history[sym]["records"][-4:]))
 
         # Net volume + OBI
         net_vol = all_history[sym]["buy"] - all_history[sym]["sell"]
