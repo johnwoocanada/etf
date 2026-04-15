@@ -450,7 +450,7 @@ def start_system():
 def update_ui():
 
     # --- TOP YIELD TICKER ---
-    html_output = "<div style='font-family: monospace; margin-bottom: 25px;'>"
+    html_output = "<div style='font-family: monospace; margin-bottom: 6px;'>"
 
     # Header gld
     html_output += (
@@ -521,7 +521,7 @@ def update_ui():
     html_output += "</div>"
 
     # Nugt and Jdst prices
-    html_output += "<div style='background-color: #1a1a1a; padding: 20px; border-radius: 10px;'>"
+    html_output += "<div style='background-color: #1a1a1a; padding: 8px 12px; border-radius: 10px;'>"
 
     for sym, color in [("NUGT", "#FFD700"), ("JDST", "#00FF00")]:
 
@@ -537,7 +537,7 @@ def update_ui():
         obi_color = "#aaa" if (obi is None or obi >= 0) else "red"
 
         # --- SYMBOL HEADER (ALL IN ONE LINE) ---
-        html_output += "<div style='margin-bottom: 30px; font-family: monospace;'>"
+        html_output += "<div style='margin-bottom: 8px; font-family: monospace;'>"
 
         html_output += (
             f"<div style='display:flex; align-items:center; "
@@ -586,7 +586,7 @@ def update_ui():
     html_output += "</div>"
 
     # ── Forecast section ──────────────────────────────────────────────────
-    html_output += "<div style='font-family: monospace; margin-top: 25px;'>"
+    html_output += "<div style='font-family: monospace; margin-top: 6px;'>"
 
     if not forecast_history or not is_market_open():
         # Market closed — single line, same style as Gld/yield closed state
