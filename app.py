@@ -612,10 +612,10 @@ def update_ui():
 
             for i, rec in enumerate(records_to_show):
                 fc   = rec.get(sym, {})
-                low  = fc.get("low",   "—")
-                high = fc.get("high",  "—")
-                close= fc.get("close", "—")
-                ts   = rec.get("time", "")
+                low   = f"{fc.get('low',   0):.2f}"
+                high  = f"{fc.get('high',  0):.2f}"
+                close = f"{fc.get('close', 0):.2f}"
+                ts   = rec.get("time", "")[:5]
 
                 if i == 0:
                     # Latest record — bold, colored, with border-bottom separator between N and J
@@ -626,14 +626,14 @@ def update_ui():
                         f"<span style='color:{color};'>{label}</span>"
                         f"<span style='color:{color};'> {low} - {high}</span>"
                         f"<span style='color: #aaa; font-weight: normal; font-size: 15px;'>"
-                        f", closed {close} @ {ts}</span>"
+                        f", ({close}) @ {ts}</span>"
                         f"</div>"
                     )
                 else:
                     # Older records — dimmed, no label repeated
                     html_output += (
                         f"<div style='color: #aaa; font-size: 1.0em; margin: 3px 0 3px 18px;'>"
-                        f"{low} - {high}, closed {close} @ {ts}"
+                        f"{low} - {high}, ({close}) @ {ts}"
                         f"</div>"
                     )
 
